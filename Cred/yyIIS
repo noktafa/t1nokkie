@@ -1,0 +1,39 @@
+Function Foo($name, $physicalPath)
+{
+                Write-Host $name
+                Write-Host $physicalPath
+                
+                # Create Application Pool
+                Try
+                {
+                               $poolCreated = Get-WebAppPoolState $name -errorvariable myerrorvariable
+                               Write-Host $name "Pool already Exists"
+                }
+                Catch
+                {
+                               # Assume it doesn't exist. Create it.
+                               New-WebAppPool -Name $name
+                               Set-ItemProperty IIS:\AppPools\$name managedRuntimeVersion v4.0
+                }
+                
+                # Create Folder for the website
+                if(!(Test-Path $physicalPath)) {
+                               md $physicalPath
+                }
+                else {
+                               Remove-Item "$physicalPath\*" -recurse -Force
+                }
+                
+                $site = Get-WebSite | where { $_.Name -eq $name }
+                if($site -eq $null)
+                {
+                               Write-Host "Creating site: $name $physicalPath"
+                
+                               # TODO:
+                               New-WebSite $name | Out-Null
+                               New-WebApplication -Site $name -Name $name -PhysicalPath $physicalPath -ApplicationPool $name
+                }else
+                {
+                               Write-Host $name "Site already Exists"
+                }
+}
